@@ -5,7 +5,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=-/opt/css_diag_agent/diagnet.conf
-ExecStart=/bin/bash -c '/usr/bin/python3 /opt/css_diag_agent/diagnet/echo_server.py --bind 0.0.0.0 --port ${PEER_PORT:-9400}'
+ExecStart=/bin/bash -c '/usr/bin/env python /opt/css_diag_agent/diagnet/echo_server.py --bind 0.0.0.0 --port ${PEER_PORT:-9400}'
 Restart=always
 RestartSec=3s
 User=root

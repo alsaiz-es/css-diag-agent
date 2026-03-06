@@ -1,22 +1,47 @@
-#!/usr/bin/env python3
-import argparse, socket, threading
+#!/usr/bin/env python
+import socket, sys, threading
+
 def handle(conn, addr):
     try:
-        with conn:
+        try:
             while True:
                 data = conn.recv(4096)
-                if not data: break
+                if not data:
+                    break
                 conn.sendall(data)
-    except Exception: pass
+        except Exception:
+            pass
+    finally:
+        conn.close()
+
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--bind', default='0.0.0.0'); ap.add_argument('--port', type=int, default=9400)
-    args=ap.parse_args()
-    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,1)
-    s.bind((args.bind,args.port)); s.listen(128)
-    print(f"Echo server listening on {args.bind}:{args.port}", flush=True)
+    bind = '0.0.0.0'
+    port = 9400
+    args = sys.argv[1:]
+    while args:
+        if args[0] == '--bind' and len(args) > 1:
+            bind = args[1]; args = args[2:]
+        elif args[0] == '--port' and len(args) > 1:
+            port = int(args[1]); args = args[2:]
+        else:
+            args = args[1:]
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind((bind, port))
+    s.listen(128)
+    sys.stdout.write("Echo server listening on %s:%d\n" % (bind, port))
+    sys.stdout.flush()
     try:
-        while True:
-            conn,addr=s.accept(); threading.Thread(target=handle, args=(conn,addr), daemon=True).start()
-    except KeyboardInterrupt: pass
-    finally: s.close()
-if __name__=='__main__': main()
+        try:
+            while True:
+                conn, addr = s.accept()
+                t = threading.Thread(target=handle, args=(conn, addr))
+                t.setDaemon(True)
+                t.start()
+        except KeyboardInterrupt:
+            pass
+    finally:
+        s.close()
+
+if __name__ == '__main__':
+    main()

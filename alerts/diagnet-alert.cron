@@ -1,0 +1,1 @@
+*/5 * * * * root /opt/css_diag_agent/alerts/diagnet_alert.sh >> /var/log/css_diag_agent/alerts_cron.log 2>&1

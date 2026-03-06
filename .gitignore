@@ -16,6 +16,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Distribución
+dist/
+
 # Claude Code
 .claude/
 CLAUDE.local.md

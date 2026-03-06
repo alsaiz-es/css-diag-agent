@@ -42,6 +42,35 @@ Selective installation:
 ./install.sh --uninstall  # stop services, remove units (keeps data)
 ```
 
+## Init system compatibility
+
+The installer auto-detects the init system and adapts accordingly:
+
+| Init system | Detection | Services | Alerts scheduling |
+|---|---|---|---|
+| **systemd** | `/run/systemd/system` exists | `.service` units via `systemctl` | systemd timer (every 5 min) |
+| **SysV init** | fallback | `/etc/init.d/` scripts via `update-rc.d` or `chkconfig` | cron job in `/etc/cron.d/` |
+
+### systemd services
+
+| Unit | Description |
+|---|---|
+| `echo_server.service` | TCP echo server on `PEER_PORT` |
+| `diagnet.service` | Continuous probe loop |
+| `vmwatch.service` | Jitter + net + disk heartbeat loop |
+| `diagnet-alert.timer` | Triggers `diagnet-alert.service` every 5 min |
+
+### SysV init services
+
+| Script | Description |
+|---|---|
+| `css-echo-server` | TCP echo server (uses python3/python2.6/python auto-detection) |
+| `css-diagnet` | Continuous probe loop |
+| `css-vmwatch` | Jitter + net + disk heartbeat loop |
+| `css-diagnet-alert` (cron) | Alert summary every 5 min via `/etc/cron.d/` |
+
+All init.d scripts support `start`, `stop`, `restart`, and `status` commands.
+
 ## Configuration
 
 All settings live in `diagnet.conf`, sourced by every script. The installer copies it to `/opt/css_diag_agent/diagnet.conf` only if no config exists yet.
@@ -80,29 +109,33 @@ DIAGNOSTIC_WINDOW_MIN=15
 /opt/css_diag_agent/
 ├── diagnet.conf
 ├── diagnet/
-│   ├── diagnet.sh          # probe loop
-│   ├── echo_server.py      # TCP echo server
-│   ├── diagnet_report.sh   # one-shot log reporter
-│   ├── diagnet.service
-│   └── echo_server.service
+│   ├── diagnet.sh            # probe loop
+│   ├── echo_server.py        # TCP echo server
+│   ├── diagnet_report.sh     # one-shot log reporter
+│   ├── diagnet.service        # systemd unit
+│   ├── diagnet.init           # SysV init script
+│   ├── echo_server.service    # systemd unit
+│   └── echo_server.init       # SysV init script
 ├── vmwatch/
-│   ├── vmwatch.sh           # jitter + net + disk loop
-│   ├── snapshot.sh          # system snapshot
-│   ├── tcpdump.sh           # packet capture
-│   └── vmwatch.service
+│   ├── vmwatch.sh             # jitter + net + disk loop
+│   ├── snapshot.sh            # system snapshot
+│   ├── tcpdump.sh             # packet capture
+│   ├── vmwatch.service        # systemd unit
+│   └── vmwatch.init           # SysV init script
 └── alerts/
-    ├── diagnet_alert.sh     # periodic summary
-    ├── diagnet-alert.service
-    └── diagnet-alert.timer
+    ├── diagnet_alert.sh       # periodic summary
+    ├── diagnet-alert.service  # systemd unit
+    ├── diagnet-alert.timer    # systemd timer
+    └── diagnet-alert.cron     # cron alternative
 
 /var/log/css_diag_agent/
-├── diagnet.log              # probe results
-├── vmwatch.log              # heartbeats and events
-├── alerts.log               # periodic summaries
-├── tcpdump.log              # capture log
-├── snapshot_*.tgz           # system snapshots
-├── pcap_*.pcap              # packet captures
-└── sar_1s_*.sadc            # sar recordings
+├── diagnet.log                # probe results (auto-rotates at 50MB)
+├── vmwatch.log                # heartbeats and events
+├── alerts.log                 # periodic summaries
+├── tcpdump.log                # capture log
+├── snapshot_*.tgz             # system snapshots
+├── pcap_*.pcap                # packet captures
+└── sar_1s_*.sadc              # sar recordings
 ```
 
 ## Log format
@@ -120,7 +153,7 @@ Event types: `PING_OK`, `PING_FAIL`, `PING_SLOW_TRIGGER`, `TCP_OK`, `TCP_FAIL`, 
 - Linux with systemd or SysV init (auto-detected)
 - Bash 3.x+, coreutils, iputils (ping), nc (netcat)
 - Python 2.4+ or 3.x (echo server only)
-- Optional: tcpdump, sysstat (sar)
+- Optional: tcpdump, sysstat (sar, mpstat, pidstat, iostat)
 
 ## License
 
